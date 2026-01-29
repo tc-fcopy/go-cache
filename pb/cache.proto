@@ -20,7 +20,7 @@ message ResponseForDelete {
 
 service GoCache {
   rpc Get(Request) returns (ResponseForGet);
-  rpc Put(Request) returns (ResponseForGet);
+  rpc Set(Request) returns (ResponseForGet);
   rpc Delete(Request) returns (ResponseForDelete);
 
 }

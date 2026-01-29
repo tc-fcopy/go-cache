@@ -2,9 +2,12 @@
 package gocache
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	pb "github.com/tc-fcopy/go-cache/pb"
+	"github.com/tc-fcopy/go-cache/registry"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -78,7 +81,7 @@ func NewServer(addr, svcName string, opts ...ServerOption) (*Server, error) {
 		stopCh:     make(chan error),
 		opts:       options,
 	}
-
+	// 注册服务
 	pb.RegisterGoCacheServer(srv.grpcServer, srv)
 
 }
@@ -94,19 +97,55 @@ func (s *Server) Start() error {
 	// 注册到etcd
 	stopCh := make(chan error)
 	go func() {
-		if err := registry.Register(); err != nil {
+		if err := registry.Register(s.svcName, s.addr, stopCh); err != nil {
+			logrus.Errorf("failed to register service: %v", err)
+			close(stopCh)
+			return
 		}
 	}()
+	logrus.Infof("server starting at %s", s.addr)
+	return s.grpcServer.Serve(lis)
 }
 
 // loadTLSCredentials
 func loadTLSCredentials(certFile, keyFile string) (credentials.TransportCredentials, error) {
+	// 加载X.509格式的证书文件和私钥文件，生成tls.Certificate实例
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, err
 	}
-	// return
+	// 基于加载的证书创建TLS配置，并封装为gRPC标准的传输凭证
 	return credentials.NewTLS(&tls.Config{
 		Certificates: []tls.Certificate{cert}},
 	), nil
+}
+
+func (s Server) Get(ctx context.Context, req *pb.Request) (*pb.ResponseForGet, error) {
+	group := GetGroup(req.Group)
+	if group == nil {
+		return nil, fmt.Errorf("no such group: %s", req.Group)
+	}
+
+	view, err := group.Get()
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ResponseForGet{Value: view.ByteSlice()}
+}
+
+func (s *Server) Stop() {
+	close(s.stopCh)
+	s.grpcServer.GracefulStop()
+	if s.etcdCli != nil {
+		s.etcdCli.Close()
+	}
+}
+
+func (s *Server) Set(ctx context.Context, req *pb.Request) (*pb.ResponseForGet, error) {
+	group := GetGroup(req.Group)
+	if group == nil {
+		return nil, fmt.Errorf("no such group: %s", req.Group)
+	}
+
+	fromPeer := ctx.Value()
 }
