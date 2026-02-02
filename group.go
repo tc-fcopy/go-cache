@@ -106,4 +106,28 @@ func (g *Group) Get(ctx context.Context, key string) (ByteView, error) {
 	}
 
 	view, ok := g.mainCache.Get(ctx, key)
+
+	if ok {
+		atomic.AddInt64(&g.stats.localHits, 1)
+		return view, nil
+	}
+
+	atomic.AddInt64(&g.stats.localMisses, 1)
+
+	return g.load()
+}
+
+func (g *Group) load(ctx context.Context, key string) (ByteView, error) {
+	// 使用singleflight 确保并发请求只加载一次
+	startTime := time.Now()
+	viewi, err := g.loader.Do(key, func() (interface{}, error) {
+		return g.loadData(ctx, key)
+	})
+}
+
+func (g *Group) loadData(ctx context.Context, key string) (ByteView, error) {
+	// 尝试从远程节点获取
+	if g.peers != nil {
+		peer, ok, isSelf := g.peers.PickPeer(key)
+	}
 }

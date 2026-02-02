@@ -11,7 +11,7 @@ message Request{
 
 
 message ResponseForGet {
-  bool value = 1;
+  bytes value = 1;
 }
 
 message ResponseForDelete {
