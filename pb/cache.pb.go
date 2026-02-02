@@ -184,7 +184,7 @@ const file_cache_proto_rawDesc = "" +
 	"\x05value\x18\x01 \x01(\bR\x05value2\x87\x01\n" +
 	"\aGoCache\x12&\n" +
 	"\x03Get\x12\v.pb.Request\x1a\x12.pb.ResponseForGet\x12&\n" +
-	"\x03Put\x12\v.pb.Request\x1a\x12.pb.ResponseForGet\x12,\n" +
+	"\x03Set\x12\v.pb.Request\x1a\x12.pb.ResponseForGet\x12,\n" +
 	"\x06Delete\x12\v.pb.Request\x1a\x15.pb.ResponseForDeleteB\x04Z\x02./b\x06proto3"
 
 var (
@@ -207,10 +207,10 @@ var file_cache_proto_goTypes = []any{
 }
 var file_cache_proto_depIdxs = []int32{
 	0, // 0: pb.GoCache.Get:input_type -> pb.Request
-	0, // 1: pb.GoCache.Put:input_type -> pb.Request
+	0, // 1: pb.GoCache.Set:input_type -> pb.Request
 	0, // 2: pb.GoCache.Delete:input_type -> pb.Request
 	1, // 3: pb.GoCache.Get:output_type -> pb.ResponseForGet
-	1, // 4: pb.GoCache.Put:output_type -> pb.ResponseForGet
+	1, // 4: pb.GoCache.Set:output_type -> pb.ResponseForGet
 	2, // 5: pb.GoCache.Delete:output_type -> pb.ResponseForDelete
 	3, // [3:6] is the sub-list for method output_type
 	0, // [0:3] is the sub-list for method input_type

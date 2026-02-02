@@ -38,7 +38,7 @@ func Register(svcName, addr string, stopCh <-chan error) error {
 		addr = fmt.Sprintf("%s:%d", localIp, addr)
 	}
 
-	// 创建租约
+	// 创建10秒的租约：相当于给服务注册加“有效期”，10秒内不续期就自动注销
 	lease, err := cli.Grant(context.Background(), 10)
 	if err != nil {
 		cli.Close()
@@ -50,7 +50,7 @@ func Register(svcName, addr string, stopCh <-chan error) error {
 	_, err = cli.Put(context.Background(), key, addr, clientv3.WithLease(lease.ID))
 	if err != nil {
 		cli.Close()
-		return fmt.Errorf("the %s failed to create etcd client:%v", svcName, err)
+		return fmt.Errorf("put key %s to etcd failed:%v", svcName, err)
 	}
 
 	keepAlivech, err := cli.KeepAlive(context.Background(), lease.ID)

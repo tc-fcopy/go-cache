@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	GoCache_Get_FullMethodName    = "/pb.GoCache/Get"
-	GoCache_Put_FullMethodName    = "/pb.GoCache/Put"
+	GoCache_Set_FullMethodName    = "/pb.GoCache/Set"
 	GoCache_Delete_FullMethodName = "/pb.GoCache/Delete"
 )
 
@@ -29,7 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GoCacheClient interface {
 	Get(ctx context.Context, in *Request, opts ...grpc.CallOption) (*ResponseForGet, error)
-	Put(ctx context.Context, in *Request, opts ...grpc.CallOption) (*ResponseForGet, error)
+	Set(ctx context.Context, in *Request, opts ...grpc.CallOption) (*ResponseForGet, error)
 	Delete(ctx context.Context, in *Request, opts ...grpc.CallOption) (*ResponseForDelete, error)
 }
 
@@ -51,10 +51,10 @@ func (c *goCacheClient) Get(ctx context.Context, in *Request, opts ...grpc.CallO
 	return out, nil
 }
 
-func (c *goCacheClient) Put(ctx context.Context, in *Request, opts ...grpc.CallOption) (*ResponseForGet, error) {
+func (c *goCacheClient) Set(ctx context.Context, in *Request, opts ...grpc.CallOption) (*ResponseForGet, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResponseForGet)
-	err := c.cc.Invoke(ctx, GoCache_Put_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, GoCache_Set_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (c *goCacheClient) Delete(ctx context.Context, in *Request, opts ...grpc.Ca
 // for forward compatibility.
 type GoCacheServer interface {
 	Get(context.Context, *Request) (*ResponseForGet, error)
-	Put(context.Context, *Request) (*ResponseForGet, error)
+	Set(context.Context, *Request) (*ResponseForGet, error)
 	Delete(context.Context, *Request) (*ResponseForDelete, error)
 	mustEmbedUnimplementedGoCacheServer()
 }
@@ -91,8 +91,8 @@ type UnimplementedGoCacheServer struct{}
 func (UnimplementedGoCacheServer) Get(context.Context, *Request) (*ResponseForGet, error) {
 	return nil, status.Error(codes.Unimplemented, "method Get not implemented")
 }
-func (UnimplementedGoCacheServer) Put(context.Context, *Request) (*ResponseForGet, error) {
-	return nil, status.Error(codes.Unimplemented, "method Put not implemented")
+func (UnimplementedGoCacheServer) Set(context.Context, *Request) (*ResponseForGet, error) {
+	return nil, status.Error(codes.Unimplemented, "method Set not implemented")
 }
 func (UnimplementedGoCacheServer) Delete(context.Context, *Request) (*ResponseForDelete, error) {
 	return nil, status.Error(codes.Unimplemented, "method Delete not implemented")
@@ -136,20 +136,20 @@ func _GoCache_Get_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GoCache_Put_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _GoCache_Set_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GoCacheServer).Put(ctx, in)
+		return srv.(GoCacheServer).Set(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: GoCache_Put_FullMethodName,
+		FullMethod: GoCache_Set_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GoCacheServer).Put(ctx, req.(*Request))
+		return srv.(GoCacheServer).Set(ctx, req.(*Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -184,8 +184,8 @@ var GoCache_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GoCache_Get_Handler,
 		},
 		{
-			MethodName: "Put",
-			Handler:    _GoCache_Put_Handler,
+			MethodName: "Set",
+			Handler:    _GoCache_Set_Handler,
 		},
 		{
 			MethodName: "Delete",
