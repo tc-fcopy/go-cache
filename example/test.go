@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	lcache "github.com/tc-fcopy/go-cache"
+	"log"
 )
 
 func main() {
@@ -17,6 +17,7 @@ func main() {
 	log.Printf("[节点%s] 已启动, 地址： %s", *nodeID, addr)
 
 	// 创建节点
-	node, err := lcache.
+	node, err := lcache.NewServer(addr, "go-cache",
+		lcache.withEtcd)
 	select {}
 }

@@ -83,7 +83,7 @@ func (x *Request) GetValue() []byte {
 
 type ResponseForGet struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Value         bool                   `protobuf:"varint,1,opt,name=value,proto3" json:"value,omitempty"`
+	Value         []byte                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -118,11 +118,11 @@ func (*ResponseForGet) Descriptor() ([]byte, []int) {
 	return file_cache_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *ResponseForGet) GetValue() bool {
+func (x *ResponseForGet) GetValue() []byte {
 	if x != nil {
 		return x.Value
 	}
-	return false
+	return nil
 }
 
 type ResponseForDelete struct {
@@ -179,7 +179,7 @@ const file_cache_proto_rawDesc = "" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\fR\x05value\"&\n" +
 	"\x0eResponseForGet\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\bR\x05value\")\n" +
+	"\x05value\x18\x01 \x01(\fR\x05value\")\n" +
 	"\x11ResponseForDelete\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\bR\x05value2\x87\x01\n" +
 	"\aGoCache\x12&\n" +
