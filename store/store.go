@@ -48,9 +48,9 @@ func NewOptions() Options {
 func NewStore(cacheType CacheType, option Options) Store {
 	switch cacheType {
 	case LRU:
-		return newLRU2Cache(option)
-	case LRU2:
 		return newLRUCache(option)
+	case LRU2:
+		return newLRU2Cache(option)
 	default:
 		return newLRUCache(option)
 	}

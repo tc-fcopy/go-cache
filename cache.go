@@ -117,3 +117,103 @@ func (c *Cache) Get(ctx context.Context, key string) (value ByteView, ok bool) {
 	atomic.AddInt64(&c.misses, 1)
 	return ByteView{}, false
 }
+
+func (c *Cache) AddWithExpiration(key string, value ByteView, expirationTime time.Time) {
+	if atomic.LoadInt32(&c.closed) == 1 {
+		logrus.Warnf("Attempted to add to a closed cache: %s ", key)
+		return
+	}
+
+	c.ensureInitialized()
+
+	// 计算过期时间
+	expiration := time.Until(expirationTime)
+	if expiration <= 0 {
+		logrus.Debugf("Key %s already expired. not adding to cache", key)
+		return
+	}
+
+	// 设置到底层存储
+	if err := c.store.SetWithExpiration(key, value, expiration); err != nil {
+		logrus.Warnf("failed to add key %s to cache: %v", key, value)
+	}
+}
+
+func (c *Cache) Clear() {
+	if atomic.LoadInt32(&c.closed) == 1 {
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.store.Clear()
+
+	atomic.StoreInt64(&c.hits, 0)
+	atomic.StoreInt64(&c.misses, 0)
+}
+
+func (c *Cache) Close() {
+	if !atomic.CompareAndSwapInt32(&c.closed, 0, 1) {
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.store != nil {
+		if closer, ok := c.store.(interface{ Close() }); ok {
+			closer.Close()
+		}
+		c.store = nil
+	}
+
+	atomic.StoreInt32(&c.initialized, 0)
+
+	logrus.Debugf("Cache closed, hits: %d, misses: %d", atomic.LoadInt64(&c.hits), atomic.LoadInt64(&c.misses))
+}
+
+func (c *Cache) Len() int {
+	if atomic.LoadInt32(&c.closed) == 1 || atomic.LoadInt32(&c.initialized) == 0 {
+		return 0
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return c.store.Len()
+}
+
+// 返回缓存统计信息
+func (c *Cache) Stats() map[string]interface{} {
+	stats := map[string]interface{}{
+		"initialized": atomic.LoadInt32(&c.initialized) == 1,
+		"closed":      atomic.LoadInt32(&c.closed) == 1,
+		"misses":      atomic.LoadInt64(&c.misses),
+		"hits":        atomic.LoadInt64(&c.hits),
+	}
+
+	if atomic.LoadInt32(&c.initialized) == 1 {
+		stats["size"] = c.Len()
+
+		// 计算命中率
+		totalRequests := stats["hits"].(int64) + stats["misses"].(int64)
+		if totalRequests > 0 {
+			stats["hit_rate"] = float64(stats["hits"].(int64)) / float64(totalRequests)
+		} else {
+			stats["hit_rate"] = 0.0
+		}
+	}
+
+	return stats
+}
+
+func (c *Cache) Delete(key string) bool {
+	if atomic.LoadInt32(&c.closed) == 1 || atomic.LoadInt32(&c.initialized) == 0 {
+		return false
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.store.Delete(key)
+}
