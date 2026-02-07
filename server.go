@@ -11,6 +11,8 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"net"
 	"sync"
 	"time"
@@ -18,6 +20,7 @@ import (
 
 // Server 分布式缓存服务的核心服务实例结构体
 type Server struct {
+	pb.UnimplementedGoCacheServer
 	addr       string           // 服务监听地址（如: ":8080"）
 	svcName    string           // 服务名称（用于etcd服务注册的标识）
 	groups     *sync.Map        // 缓存分组映射表，key为分组名，value为具体缓存分组实例（并发安全）
@@ -25,6 +28,16 @@ type Server struct {
 	etcdCli    *clientv3.Client // etcd 客户端实例，用于和etcd集群交互
 	stopCh     chan error       // 服务停止信号通道，用于优雅关闭服务
 	opts       *ServerOptions   // 服务启动的配置选项
+}
+
+func (s *Server) Delete(ctx context.Context, req *pb.Request) (*pb.ResponseForDelete, error) {
+	group := GetGroup(req.Group)
+	if group == nil {
+		return nil, fmt.Errorf("no such group: %s", req.Group)
+	}
+
+	err := group.Delete(ctx, req.Key)
+	return &pb.ResponseForDelete{Value: err == nil}, err
 }
 
 // ServerOption 分布式缓存服务的配置选项结构体
@@ -84,6 +97,11 @@ func NewServer(addr, svcName string, opts ...ServerOption) (*Server, error) {
 	// 注册服务
 	pb.RegisterGoCacheServer(srv.grpcServer, srv)
 
+	// 注册健康检查服务
+	healthServer := health.NewServer()
+	healthpb.RegisterHealthServer(srv.grpcServer, healthServer)
+	healthServer.SetServingStatus(srv.svcName, healthpb.HealthCheckResponse_SERVING)
+	return srv, nil
 }
 
 // Start
@@ -126,11 +144,11 @@ func (s Server) Get(ctx context.Context, req *pb.Request) (*pb.ResponseForGet, e
 		return nil, fmt.Errorf("no such group: %s", req.Group)
 	}
 
-	view, err := group.Get()
+	view, err := group.Get(ctx, req.Key)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.ResponseForGet{Value: view.ByteSlice()}
+	return &pb.ResponseForGet{Value: view.ByteSlice()}, nil
 }
 
 func (s *Server) Stop() {
@@ -147,5 +165,26 @@ func (s *Server) Set(ctx context.Context, req *pb.Request) (*pb.ResponseForGet, 
 		return nil, fmt.Errorf("no such group: %s", req.Group)
 	}
 
-	fromPeer := ctx.Value()
+	// 从context里面获取标记, 如果没有，就创建新的context
+	fromPeer := ctx.Value("from_peer")
+	if fromPeer == nil {
+		ctx = context.WithValue(ctx, "from_peer", true)
+	}
+
+	if err := group.Set(ctx, req.Key, req.Value); err != nil {
+		return nil, err
+	}
+	return &pb.ResponseForGet{Value: req.Value}, nil
+}
+
+func WithDialTimeout(dialTimeout time.Duration) ServerOption {
+	return func(o *ServerOptions) {
+		o.DialTimeout = dialTimeout
+	}
+}
+
+func WithEtcdEndpoints(endpoints []string) ServerOption {
+	return func(o *ServerOptions) {
+		o.EtcdEndpoints = endpoints
+	}
 }
